@@ -1,0 +1,202 @@
+
+---- creation of jenkins server :
+    
+CentOS 7 (x86_64) - with Updates HVM
+
+sg :22,80,8080
+
+--- log into my server and change the hostname to jenkins ....
+
+=========================================
+jenkins deploymnt :
+
+yum update -y
+yum install wget -y
+
+---   https://pkg.jenkins.io/redhat-stable/
+
+publicIP:8080
+
+systemctl status jenkins
+systemctl start jenkins
+
+--- follow the steps on the application and be on homepage of jenkins
+
+===================================================
+
+---- to provide jenkins root previlegs :
+
+
+systemctl status jenkins
+
+vi /usr/lib/systemd/system/jenkins.service
+
+
+
+# Unix account that runs the Jenkins daemon
+# Be careful when you change this, as you need to update the permissions of
+# $JENKINS_HOME, $JENKINS_LOG, and (if you have already run Jenkins)
+# $JENKINS_WEBROOT.
+User=root
+Group=root
+
+
+
+systemctl daemon-reload
+
+systemctl restart jenkins
+
+-- confirm if it has the access now to make configuration changes on server
+
+========================================================================
+creating the workflow :
+
+add the vcs to my project 
+
+-- install terraform on jenkins server
+
+https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli
+
+------ create a role on aws to authenticate ur aws account to ur jenkin server
+
+admin-role
+attach the role to jenkins server
+
+=================================================
+
+--- install ansible on centos host machine 
+
+sudo yum install epel-release
+sudo yum install ansible
+
+
+-- vi /etc/ansible/ansible.cfg
+   uncomment host_key_checking=FALSE
+
+
+--- create a keypair on centos hostmachine to import a keypair named san on aws ohio region to authenticate :
+ssh-keygen -t rsa
+-- import the public key to virginia in creation san key
+
+
+----- build ur pipeline 
+
+============================================
+
+-- create a polll 
+* * * * *
+
+----- use the gitbash to push the change
+
+ vi web.yaml
+  519  git add .
+  520  git commit -m " updated the end content"
+  521  git push origin main
+
+
+=======================================================================================================================
+
+========================================================================================================================
+
+========================================================================================================================
+
+End to End pipline on ubuntu machine
+
+Step 1  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  Install Terrafom on the machine <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+sudo apt-get update && sudo apt-get install -y gnupg software-properties-common
+
+wget -O- https://apt.releases.hashicorp.com/gpg | \
+gpg --dearmor | \
+sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
+sudo tee /etc/apt/sources.list.d/hashicorp.list
+
+sudo apt update
+
+sudo apt-get install terraform
+
+
+Step 2 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Install Jenkins on this machine >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+sudo apt update
+sudo apt install openjdk-11-jre
+
+curl -fsSL https://pkg.jenkins.io/debian/jenkins.io-2023.key | sudo tee \
+  /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
+  https://pkg.jenkins.io/debian binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
+sudo apt-get update
+sudo apt-get install jenkins -y
+
+---- to provide jenkins root previlegs :
+
+systemctl status jenkins
+
+vi /usr/lib/systemd/system/jenkins.service
+
+# Unix account that runs the Jenkins daemon
+# Be careful when you change this, as you need to update the permissions of
+# $JENKINS_HOME, $JENKINS_LOG, and (if you have already run Jenkins)
+# $JENKINS_WEBROOT.
+User=root
+Group=root
+
+---
+systemctl daemon-reload
+
+systemctl restart jenkins
+
+# Jenkins works on port no 8080
+
+Step 4 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Install Ansible on this Server <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+sudo apt update
+sudo apt install software-properties-common
+sudo add-apt-repository --yes --update ppa:ansible/ansible
+sudo apt install ansible -y
+
+-- vi /etc/ansible/ansible.cfg
+   uncomment host_key_checking=FALSE
+   
+   
+Step 5 >>>>>>>>>>>>>>>>>>>>>>>>>>>>> Create a SSH key and attach it with the EC2 instance <<<<<<<<<<<<<<<<<<<<<<<<
+
+ssh-keygen -t rsa -C ubuntu 
+
+store is any location like /root/san (in our example)
+
+use the data of san.pub and create a key-gen on the aws using terraform using below file.
+
+provider "aws" {
+region = "us-west-1"
+}
+
+resource "aws_key_pair" "san" {
+  key_name   = "san"
+  public_key = "public-key content"
+}
+
+Step 6 >>>>>>>>>>>>>>>>>>>>>>>>>>>> create a pipeline and use the below Jenkins script >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+access the Jenkins server >>>> PublicIP:8080  >> provide the secret password >>>install the required plugins
+
+#!/bin/bash
+terraform init
+sleep 30
+terraform $ACTION -auto-approve
+
+if [ $ACTION = "destroy" ]; then
+	exit 0
+else
+	ansible-playbook -i /etc/ansible/env nginx1.yaml 
+ fi
+ 
+ ------------------------
+ 
+ /etc/ansible/env >> where we store the public IP of the server 
+ 
+ 
